@@ -1,0 +1,159 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres-backup-lab
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: backup_lab
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./archive:/var/lib/postgresql/wal_archive
+      - ./base_backup:/var/lib/postgresql/base_backup
+
+  recovery:
+    image: postgres:16
+    container_name: postgres-recovery-lab
+    profiles:
+      - recovery
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: backup_lab
+    ports:
+      - "5436:5432"
+    volumes:
+      - ./base_backup:/var/lib/postgresql/data
+      - ./archive:/var/lib/postgresql/wal_archive
+
+volumes:
+  postgres_data:
+
+
+
+# services:
+#   postgres:
+#     image: postgres:16
+#     container_name: postgres-backup-lab
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: backup_lab
+#     ports:
+#       - "5435:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#       - ./archive:/var/lib/postgresql/wal_archive
+#       - ./base_backup:/var/lib/postgresql/base_backup
+
+# volumes:
+#   postgres_data:
+
+
+# docker exec -it postgres-backup-lab \
+#   psql -U postgres -d backup_lab
+
+# ALTER SYSTEM SET wal_level = 'replica';
+# ALTER SYSTEM SET archive_mode = 'on';
+# ALTER SYSTEM SET archive_command =
+# 'cp %p /var/lib/postgresql/wal_archive/%f';
+
+# docker exec postgres-backup-lab \
+#   pg_basebackup \
+#   -U postgres \
+#   -D /var/lib/postgresql/base_backup \
+#   -Fp \
+#   -Xs \
+#   -P
+
+# BEFORE:
+# ls -lah base_backup
+# total 8.0K
+# drwxr-xr-x 2 root     root     4.0K Oct  8 18:44 .
+# drwxr-xr-x 4 dagginho dagginho 4.0K Oct  8 18:44 ..
+
+# AFTER:
+# ls -lah base_backup
+# total 312K
+# drwxr-xr-x 19 root     root     4.0K Oct  8 18:59 .
+# drwxr-xr-x  4 dagginho dagginho 4.0K Oct  8 18:44 ..
+# -rw-------  1 root     root        3 Oct  8 18:58 PG_VERSION
+# -rw-------  1 root     root      225 Oct  8 18:58 backup_label
+# -rw-------  1 root     root     178K Oct  8 18:58 backup_manifest
+# drwx------  6 root     root     4.0K Oct  8 18:58 base
+# drwx------  2 root     root     4.0K Oct  8 18:58 global
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_commit_ts
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_dynshmem
+# -rw-------  1 root     root     5.7K Oct  8 18:58 pg_hba.conf
+# -rw-------  1 root     root     2.6K Oct  8 18:58 pg_ident.conf
+# drwx------  4 root     root     4.0K Oct  8 18:58 pg_logical
+# drwx------  4 root     root     4.0K Oct  8 18:58 pg_multixact
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_notify
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_replslot
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_serial
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_snapshots
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_stat
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_stat_tmp
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_subtrans
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_tblspc
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_twophase
+# drwx------  3 root     root     4.0K Oct  8 18:58 pg_wal
+# drwx------  2 root     root     4.0K Oct  8 18:58 pg_xact
+# -rw-------  1 root     root      191 Oct  8 18:58 postgresql.auto.conf
+# -rw-------  1 root     root      30K Oct  8 18:58 postgresql.conf
+
+# SELECT pg_create_restore_point('before_disaster');
+
+# SELECT pg_switch_wal();
+# pg_switch_wal 
+# ---------------
+#  0/3000548
+# (1 row)
+
+# SELECT
+#     archived_count,
+#     failed_count,
+#     last_archived_wal,
+#     last_archived_time,
+#     last_failed_wal,
+#     last_failed_time
+# FROM pg_stat_archiver;
+
+# sudo chown -R 999:999 archive
+
+# docker exec -u postgres postgres-backup-lab \
+#   sh -c 'touch /var/lib/postgresql/wal_archive/test3'
+
+# ls -lah archive
+
+
+# docker compose --profile recovery up -d recovery
+# [+] up 1/1
+#  ✔ Container postgres-recovery-lab Started                                                                   2.4s
+# dagginho@DESKTOP-BUGKGO7:~/projects/postgres-course/postgres_full_course_2026/part4/backup$ docker logs -f postgres-recovery-lab
+
+# PostgreSQL Database directory appears to contain a database; Skipping initialization
+
+# 2026-10-09 11:04:14.518 UTC [1] LOG:  starting PostgreSQL 16.14 (Debian 16.14-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+# 2026-10-09 11:04:14.519 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+# 2026-10-09 11:04:14.519 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+# 2026-10-09 11:04:14.642 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+# 2026-10-09 11:04:14.966 UTC [31] LOG:  database system was interrupted; last known up at 2026-10-09 10:41:47 UTC
+# 2026-10-09 11:04:27.157 UTC [31] LOG:  syncing data directory (fsync), elapsed time: 12.17 s, current path: ./base/5/1249
+# 2026-10-09 11:04:35.095 UTC [31] LOG:  syncing data directory (fsync), elapsed time: 20.11 s, current path: ./base/16384/6239
+# 2026-10-09 11:04:44.992 UTC [31] LOG:  syncing data directory (fsync), elapsed time: 30.01 s, current path: ./base/1/13460_fsm
+# cp: cannot stat '/var/lib/postgresql/wal_archive/00000002.history': No such file or directory
+# 2026-10-09 11:04:56.507 UTC [31] LOG:  starting point-in-time recovery to "before_disaster"
+# 2026-10-09 11:04:56.508 UTC [31] LOG:  starting backup recovery with redo LSN 0/2000028, checkpoint LSN 0/2000098, on timeline ID 1
+# 2026-10-09 11:04:56.699 UTC [31] LOG:  restored log file "000000010000000000000002" from archive
+# 2026-10-09 11:04:56.841 UTC [31] LOG:  redo starts at 0/2000028
+# 2026-10-09 11:04:57.042 UTC [31] LOG:  restored log file "000000010000000000000003" from archive
+# 2026-10-09 11:04:57.332 UTC [31] LOG:  restored log file "000000010000000000000004" from archive
+# 2026-10-09 11:04:57.436 UTC [31] LOG:  completed backup recovery with redo LSN 0/2000028 and end LSN 0/2000138
+# 2026-10-09 11:04:57.437 UTC [31] LOG:  consistent recovery state reached at 0/2000138
+# 2026-10-09 11:04:57.437 UTC [31] LOG:  recovery stopping at restore point "before_disaster", time 2026-10-09 10:43:47.374593+00
+# 2026-10-09 11:04:57.437 UTC [31] LOG:  pausing at the end of recovery
+# 2026-10-09 11:04:57.437 UTC [31] HINT:  Execute pg_wal_replay_resume() to promote.
+# 2026-10-09 11:04:57.437 UTC [1] LOG:  database system is ready to accept read-only connections

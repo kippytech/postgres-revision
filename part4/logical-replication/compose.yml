@@ -1,0 +1,32 @@
+services:
+  publisher:
+    image: postgres:16
+    container_name: postgres-publisher
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: source_db
+    ports:
+      - "5433:5432"
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+    volumes:
+      - publisher_data:/var/lib/postgresql/data
+
+  subscriber:
+    image: postgres:16
+    container_name: postgres-subscriber
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: target_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - subscriber_data:/var/lib/postgresql/data
+
+volumes:
+  publisher_data:
+  subscriber_data:
